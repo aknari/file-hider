@@ -5,10 +5,13 @@ export class VisibilityToggleSetting {
 
 	public static create(plugin: FileHider, container: HTMLElement) {
 		return new Setting(container)
-		.setName(`Hidden File Visibility`)
-		.setDesc(`Toggle whether or not files and folders that are told to be hidden will be hidden or not.`)
+		.setName(`Show hidden files and folders`)
+		.setDesc(`Reveals everything the plugin is hiding, without removing anything from the lists. Turn it off to hide it again.`)
 		.addToggle(toggle => {
 			toggle
+			// The switch reads "show", so it is on when hiding is off. This is
+			// the same value the upstream plugin stored; only the label was
+			// backwards.
 			.setValue(!plugin.settings.hidden)
 			.onChange(() => {
 				plugin.toggleVisibility();

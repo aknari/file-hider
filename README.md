@@ -1,41 +1,82 @@
 # File Hider
 
-This is a plugin for [Obsidian](https://obsidian.md) that allows hiding specific
-files and folders from the file explorer.
+Hide files and folders from Obsidian's file explorer, either by picking them one
+by one or with **regular expressions**.
 
-## How to Use
-Right Click on any file or folder that you want to hide, and click `Hide Folder`
-or `Hide File`. This will hide the file by default.
+This is a fork of [Oliver Akins' File Hider](https://github.com/eldritch-oliver/file-hider)
+(MIT). The original has been inactive since 2023 and its published build predates
+the fix for a bug that makes the plugin fail on some files; the fork picks up
+`main`, fixes that, and adds the pattern list.
 
-### Showing Hidden Files/Folders
-You can toggle the visibility status of the files and folders by running the
-`File Hider: Toggle Visibility` command.
+## Why the published plugin fails on `Icon`
 
-### Removing File/Folder's Hidden Status
+Up to 1.1.1, hiding a row was:
 
-#### Right Click on Shown File
-If you right click on a file that is set to be hidden, when it is shown in the
-list, you will see an `Unhide File` or `Unhide Folder` option, clicking that
-will remove it from the list of hidden files and keep it visible once hidden
-files are no longer visible.
+```js
+document.querySelector(`[data-path="${path}"]`).parentElement.style.display = 'none';
+```
 
-#### File/Folder List
-- Open Obsidian's settings
-- Go to the `File Hider` tab
-- Click on either `Manage` to open a list of all hidden files and folders.
-- Click on the `X` button of the file or folder you no longer want hidden.
+macOS leaves an `Icon\r` file in any folder that has a custom icon, and Obsidian
+lists it in the explorer. A raw carriage return inside an attribute selector is
+invalid CSS: `querySelector` throws, the exception aborts the click handler
+before `hiddenList.push(...)` and `saveSettings()` run, and the result is that
+**the file is not hidden and the hidden list stays empty**.
 
+The fix (`CSS.escape(path)`, upstream PR #30) was merged in January 2024 and
+never released. This fork starts from that `main`.
 
-### Ribbon Icon
-If you want an icon in the ribbon sidebar, I would recommend using
-[Customizable Sidebar](https://github.com/phibr0/obsidian-customizable-sidebar)
-and adding the `File Hider: Toggle Visibility` command.
+## Install
 
-## Issues? Feature Requests?
-If you want to report a bug or request a new feature, go to the
-[GitHub Repo](https://github.com/Oliver-Akins/file-hider/issues/new/choose) and
-open an issue.
+Download `main.js` and `manifest.json` from the latest release and put them in
+`<vault>/.obsidian/plugins/OA-file-hider/`, then enable the plugin in
+*Settings → Community plugins*. The plugin id is unchanged, so it replaces the
+store build and keeps existing settings.
 
-## Contributing
-If you would like to contribute to the codebase, please make sure to read the
-[contributing guidelines](https://github.com/Oliver-Akins/file-hider/blob/main/.github/contributing.md)
+With [BRAT](https://github.com/TfTHacker/obsidian42-brat), add this repository
+and let it track the releases.
+
+## Usage
+
+- **Hide one file or folder**: right-click it in the explorer and choose
+  `Hide File` / `Hide Folder`. The path goes to the hidden list.
+- **Unhide**: right-click it again (it is visible while the reveal switch is on)
+  and choose `Unhide`, or remove it from *Settings → File Hider → Manage*.
+- **Reveal everything without losing the list**: the `Show hidden files and
+  folders` switch at the top of the settings tab. Off means hidden, which is the
+  normal state.
+- **Patterns**: *Settings → File Hider → Manage* has a second list. Add a regular
+  expression and every file or folder whose **path** matches it disappears.
+
+## Patterns
+
+- Matching runs against the full path, e.g. `01-inbox/nota.md`, and is
+  case-sensitive.
+- `^Icon` covers the macOS file above; `\.tmp$` covers an extension; `^90-`
+  covers a folder prefix and, with it, everything inside.
+- Any pattern matching is enough; order does not matter.
+- Invalid expressions are rejected when added, and ignored if they reach
+  `data.json` some other way.
+- Each row shows how many explorer rows it matches right now, so a typo is
+  obvious before going hunting for the file.
+- Removing a pattern restores only the rows that pattern was hiding.
+- The hand-picked list wins: a path in both stays hidden, and `Unhide` on a path
+  that also matches a pattern will not keep it visible — remove the pattern too.
+
+Rows are re-applied after Obsidian repaints the explorer (expanding a folder,
+switching workspaces), so hidden items do not come back. The plugin is cosmetic:
+hidden files remain searchable and still appear in the graph view.
+
+## Build
+
+```bash
+npm install
+npm run typecheck
+npm run build      # dist/main.js
+OBSIDIAN_PLUGIN_DIR=/path/to/vault/.obsidian/plugins/OA-file-hider npm run deploy
+```
+
+`main.js` is not committed; releases carry it, as in the original repository.
+
+## License
+
+MIT, © 2022 Oliver Akins. See [LICENSE.txt](LICENSE.txt).
